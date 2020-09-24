@@ -20,7 +20,7 @@ std::tuple<double, double, double> color_from_index(int index) {
 // Note that the number of points is kept fairly small because a display
 // callback should NEVER run for too long.
 void display() {
-    // std::cout << dump_pos(current_time) << std::endl;
+    std::cout << dump_pos(current_time) << std::endl;
     usleep(REFRESH_TIME);
 
     glClear(GL_COLOR_BUFFER_BIT);
@@ -46,8 +46,10 @@ void display() {
     for (int i = 0; i < N_PARTICLE; i++) {
         auto c = color_from_index(i);
         glColor3f(std::get<0>(c), std::get<1>(c), std::get<2>(c));
-        glVertex2f((get_pos(current_time, i, 0) - x_min) / x_max * EDGE_LENGTH,
-                   (get_pos(current_time, i, 1) - y_min) / y_max * EDGE_LENGTH);
+        glVertex2f((get_pos(current_time, i, 0) - x_min) / (x_max - x_min) *
+                       EDGE_LENGTH,
+                   (get_pos(current_time, i, 1) - y_min) / (y_max - y_min) *
+                       EDGE_LENGTH);
     }
     glEnd();
 
@@ -58,8 +60,9 @@ void display() {
         for (int i = 0; i < N_PARTICLE; i++) {
             auto c = color_from_index(i);
             glColor3f(std::get<0>(c), std::get<1>(c), std::get<2>(c));
-            glVertex2f((get_pos(t, i, 0) - x_min) / x_max * EDGE_LENGTH,
-                       (get_pos(t, i, 1) - y_min) / y_max * EDGE_LENGTH);
+            glVertex2f(
+                (get_pos(t, i, 0) - x_min) / (x_max - x_min) * EDGE_LENGTH,
+                (get_pos(t, i, 1) - y_min) / (y_max - y_min) * EDGE_LENGTH);
         }
     }
     glEnd();
@@ -86,7 +89,8 @@ void init() {
 // does application initialization; enters the main event loop.
 int main(int argc, char** argv) {
     init_sim();
-    do_cuda_sim();
+    // do_cuda_sim();
+    do_sim();
 
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);

@@ -22,8 +22,8 @@ __global__ void sim_kernel(double *pos, double *vel, double *acc, double *mas){
                     pos[t * N_PARTICLE * DIMENSION + i * DIMENSION + 1] -
                     pos[t * N_PARTICLE * DIMENSION + j * DIMENSION + 1];
 
-                double r_dx = pos[i * 2 + 0] - pos[j * 2 + 0];
-                double r_dy = pos[i * 2 + 1] - pos[j * 2 + 1];
+                double r_dx = pos[t * N_PARTICLE * DIMENSION + i * 2 + 0] - pos[t * N_PARTICLE * DIMENSION + j * 2 + 0];
+                double r_dy = pos[t * N_PARTICLE * DIMENSION + i * 2 + 1] - pos[t * N_PARTICLE * DIMENSION + j * 2 + 1];
                 double r = sqrt(r_dx * r_dx + r_dy * r_dy);
 
                 acc[i * DIMENSION + 0] += -G * mas[j] * dx / (r * r * r);

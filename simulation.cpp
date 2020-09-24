@@ -11,9 +11,11 @@
 
 double *pos, *vel, *acc, *mas;
 
-double dist(int i, int j) {
-    double dx = pos[i * 2 + 0] - pos[j * 2 + 0];
-    double dy = pos[i * 2 + 1] - pos[j * 2 + 1];
+double dist(int time, int i, int j) {
+    double dx = pos[time * N_PARTICLE * DIMENSION + i * 2 + 0] -
+                pos[time * N_PARTICLE * DIMENSION + j * 2 + 0];
+    double dy = pos[time * N_PARTICLE * DIMENSION + i * 2 + 1] -
+                pos[time * N_PARTICLE * DIMENSION + j * 2 + 1];
     return sqrt(dx * dx + dy * dy);
 }
 
@@ -45,6 +47,7 @@ void init_sim() {
 
     for (int i = 0; i < N_PARTICLE; i++) {
         mas[i] = (rand() % RAND_MAX) * MAX_MASS / RAND_MAX;
+        // mas[i] = 0.5 * MAX_MASS;
         pos[i * DIMENSION + 0] =
             (double)(rand() % RAND_MAX) / (double)RAND_MAX * MAX_POS;
         pos[i * DIMENSION + 1] =
@@ -70,7 +73,7 @@ void do_sim() {
                 double dy =
                     pos[t * N_PARTICLE * DIMENSION + i * DIMENSION + 1] -
                     pos[t * N_PARTICLE * DIMENSION + j * DIMENSION + 1];
-                double r = dist(i, j);
+                double r = sqrt(dx * dx + dy * dy);
                 acc[i * DIMENSION + 0] += -G * mas[j] * dx / (r * r * r);
                 acc[i * DIMENSION + 1] += -G * mas[j] * dy / (r * r * r);
             }
