@@ -1,36 +1,72 @@
 #include <GL/glut.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <iostream>
+#include <limits>
+#include <tuple>
 
 #include "simulation.h"
 
-const double EDGE_LENGTH = 500;
-int time = 0;
+int current_time = 0;
+
+std::tuple<double, double, double> color_from_index(int index) {
+    return {get_weight(index) / MAX_MASS, 1.0 - get_weight(index) / MAX_MASS,
+            0};
+}
 
 // Note that the number of points is kept fairly small because a display
 // callback should NEVER run for too long.
 void display() {
+    // std::cout << dump_pos(current_time) << std::endl;
+    usleep(REFRESH_TIME);
+
     glClear(GL_COLOR_BUFFER_BIT);
 
-    glPointSize(30.0f);
-    glBegin(GL_POINTS);
+    double x_max = 1, x_min = 0, y_max = 1, y_min = 0;
 
-    usleep(100000);
-    // printf("time = %d =========================\n", time);
-    for (int i = 0; i < N_PARTICLE; i++) {
-        glColor3f(1.0 * (double)i / N_PARTICLE,
-                  1.0 * (double)(N_PARTICLE - i) / N_PARTICLE, 1.0);
-        glVertex2f(get_pos(time, i, 0) * EDGE_LENGTH,
-                   get_pos(time, i, 1) * EDGE_LENGTH);
-        // printf("%lf, %lf\n", get_pos(time, i, 0), get_pos(time, i, 1));
+    if (EXPAND_WINDOW) {
+        for (int t = current_time; std::max(0, current_time - TAIL_TIME) < t;
+             t--) {
+            for (int i = 0; i < N_PARTICLE; i++) {
+                x_max = std::max(x_max, get_pos(t, i, 0));
+                x_min = std::min(x_min, get_pos(t, i, 0));
+                y_max = std::max(y_max, get_pos(t, i, 1));
+                y_min = std::min(y_min, get_pos(t, i, 1));
+            }
+        }
     }
 
+    // Draw current points
+    glPointSize(POINT_SIZE);
+    glEnable(GL_POINT_SMOOTH);
+    glBegin(GL_POINTS);
+    for (int i = 0; i < N_PARTICLE; i++) {
+        auto c = color_from_index(i);
+        glColor3f(std::get<0>(c), std::get<1>(c), std::get<2>(c));
+        glVertex2f((get_pos(current_time, i, 0) - x_min) / x_max * EDGE_LENGTH,
+                   (get_pos(current_time, i, 1) - y_min) / y_max * EDGE_LENGTH);
+    }
     glEnd();
+
+    // Draw tails
+    glPointSize(TAIL_POINT_SIZE);
+    glBegin(GL_POINTS);
+    for (int t = current_time; std::max(0, current_time - TAIL_TIME) < t; t--) {
+        for (int i = 0; i < N_PARTICLE; i++) {
+            auto c = color_from_index(i);
+            glColor3f(std::get<0>(c), std::get<1>(c), std::get<2>(c));
+            glVertex2f((get_pos(t, i, 0) - x_min) / x_max * EDGE_LENGTH,
+                       (get_pos(t, i, 1) - y_min) / y_max * EDGE_LENGTH);
+        }
+    }
+    glEnd();
+
     glFlush();
 
-    time = (time + 1) % TIME_LENGTH;
+    current_time = (current_time + 1) % TIME_LENGTH;
 }
 
 // Performs application-specific initialization. Sets colors and sets up a
@@ -50,7 +86,7 @@ void init() {
 // does application initialization; enters the main event loop.
 int main(int argc, char** argv) {
     init_sim();
-    simulate();
+    do_cuda_sim();
 
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);

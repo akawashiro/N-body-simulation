@@ -5,9 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-const double G = 6.67430e-11;
-const double dt = 1.0;
-const double MAX_MASS = 10000000.0;
+#include <sstream>
+
+#include "cuda_simulation.h"
 
 double *pos, *vel, *acc, *mas;
 
@@ -19,6 +19,17 @@ double dist(int i, int j) {
 
 double get_pos(int time, int index, int xy) {
     return pos[time * N_PARTICLE * DIMENSION + index * DIMENSION + xy];
+}
+
+double get_weight(int index) { return mas[index]; }
+
+std::string dump_pos(int time) {
+    std::stringstream ss;
+    for (int i = 0; i < N_PARTICLE; i++) {
+        ss << "(" << get_pos(time, i, 0) << "," << get_pos(time, i, 1) << ") ";
+    }
+    ss << std::endl;
+    return ss.str();
 }
 
 void init_sim() {
@@ -34,12 +45,14 @@ void init_sim() {
 
     for (int i = 0; i < N_PARTICLE; i++) {
         mas[i] = (rand() % RAND_MAX) * MAX_MASS / RAND_MAX;
-        pos[i * DIMENSION + 0] = (double)(rand() % RAND_MAX) / (double)RAND_MAX;
-        pos[i * DIMENSION + 1] = (double)(rand() % RAND_MAX) / (double)RAND_MAX;
+        pos[i * DIMENSION + 0] =
+            (double)(rand() % RAND_MAX) / (double)RAND_MAX * MAX_POS;
+        pos[i * DIMENSION + 1] =
+            (double)(rand() % RAND_MAX) / (double)RAND_MAX * MAX_POS;
     }
 }
 
-void simulate() {
+void do_sim() {
     for (int t = 0; t < TIME_LENGTH; t++) {
         memset(acc, 0, sizeof(double) * N_PARTICLE * DIMENSION);
         for (int i = 0; i < N_PARTICLE; i++) {
@@ -74,6 +87,8 @@ void simulate() {
         }
     }
 }
+
+void do_cuda_sim() { call_cuda_sim(pos, vel, acc, mas); }
 
 void finish_sim() {
     free(pos);
