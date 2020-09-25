@@ -2,8 +2,7 @@
 #include <unistd.h>
 
 #include <algorithm>
-#include <cstdio>
-#include <cstdlib>
+#include <chrono>
 #include <iostream>
 #include <limits>
 #include <tuple>
@@ -13,14 +12,15 @@
 int current_time = 0;
 
 std::tuple<double, double, double> color_from_index(int index) {
-    return {get_weight(index) / MAX_MASS, 1.0 - get_weight(index) / MAX_MASS,
-            0};
+    double r = (get_weight(index) / MAX_MASS - MINIMUM_WEIGTHT_RATIO) /
+               MINIMUM_WEIGTHT_RATIO;
+    return {r, 1.0 - r, 0.0};
 }
 
 // Note that the number of points is kept fairly small because a display
 // callback should NEVER run for too long.
 void display() {
-    std::cout << dump_pos(current_time) << std::endl;
+    // std::cout << dump_pos(current_time) << std::endl;
     usleep(REFRESH_TIME);
 
     glClear(GL_COLOR_BUFFER_BIT);
@@ -56,7 +56,9 @@ void display() {
     // Draw tails
     glPointSize(TAIL_POINT_SIZE);
     glBegin(GL_POINTS);
-    for (int t = current_time; std::max(0, current_time - TAIL_TIME) < t; t--) {
+    for (int t = current_time;
+         std::max(0, current_time - TAIL_TIME * DISPLAY_RATIO) < t;
+         t -= DISPLAY_RATIO) {
         for (int i = 0; i < N_PARTICLE; i++) {
             auto c = color_from_index(i);
             glColor3f(std::get<0>(c), std::get<1>(c), std::get<2>(c));
@@ -69,7 +71,7 @@ void display() {
 
     glFlush();
 
-    current_time = (current_time + 1) % TIME_LENGTH;
+    current_time = (current_time + DISPLAY_RATIO) % TIME_LENGTH;
 }
 
 // Performs application-specific initialization. Sets colors and sets up a
@@ -89,8 +91,15 @@ void init() {
 // does application initialization; enters the main event loop.
 int main(int argc, char** argv) {
     init_sim();
-    // do_cuda_sim();
-    do_sim();
+    auto start = std::chrono::steady_clock::now();
+    if (USE_CUDA) {
+        do_cuda_sim();
+    } else {
+        do_sim();
+    }
+    auto end = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end - start;
+    std::cout << "simulation time: " << elapsed_seconds.count() << "s\n";
 
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
