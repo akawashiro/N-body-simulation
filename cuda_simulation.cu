@@ -7,103 +7,53 @@ __global__ void sim_kernel(double *pos, double *vel, double *acc, double *mas){
         // Update pos[t+1]
             pos[(t + 1) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 0] =
                 pos[t * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 0] +
-                vel[t * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 0] * dt +
-                0.5 * acc[t * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 0] * dt *
+                vel[(t % 2) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 0] * dt +
+                0.5 * acc[(t % 2) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 0] * dt *
                     dt;
             pos[(t + 1) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 1] =
                 pos[t * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 1] +
-                vel[t * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 1] * dt +
-                0.5 * acc[t * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 1] * dt *
+                vel[(t % 2) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 1] * dt +
+                0.5 * acc[(t % 2) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 1] * dt *
                     dt;
 
         __syncthreads();
 
         // Update acc[t+1]
-            for (int i = 0; i < N_PARTICLE; i++) {
-                if (i == particle_id) continue;
-                double dx =
-                    pos[(t + 1) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 0] -
-                    pos[(t + 1) * N_PARTICLE * DIMENSION + i * DIMENSION + 0];
-                double dy =
-                    pos[(t + 1) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 1] -
-                    pos[(t + 1) * N_PARTICLE * DIMENSION + i * DIMENSION + 1];
-                double r = sqrt(dx * dx + dy * dy);
-                if (r < POS_EPS) r = POS_EPS;
-                acc[(t + 1) * N_PARTICLE * DIMENSION + particle_id  * DIMENSION + 0] +=
-                    -G * mas[i] * dx / (r * r * r);
-                acc[(t + 1) * N_PARTICLE * DIMENSION + particle_id  * DIMENSION + 1] +=
-                    -G * mas[i] * dy / (r * r * r);
-            }
+        acc[((t + 1) % 2) * N_PARTICLE * DIMENSION + particle_id  * DIMENSION + 0] = 0;
+        acc[((t + 1) % 2) * N_PARTICLE * DIMENSION + particle_id  * DIMENSION + 1] = 0;
+        for (int i = 0; i < N_PARTICLE; i++) {
+            if (i == particle_id) continue;
+            double dx =
+                pos[(t + 1) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 0] -
+                pos[(t + 1) * N_PARTICLE * DIMENSION + i * DIMENSION + 0];
+            double dy =
+                pos[(t + 1) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 1] -
+                pos[(t + 1) * N_PARTICLE * DIMENSION + i * DIMENSION + 1];
+            double r = sqrt(dx * dx + dy * dy);
+            if (r < POS_EPS) r = POS_EPS;
+            acc[((t + 1) % 2) * N_PARTICLE * DIMENSION + particle_id  * DIMENSION + 0] +=
+                -G * mas[i] * dx / (r * r * r);
+            acc[((t + 1) % 2) * N_PARTICLE * DIMENSION + particle_id  * DIMENSION + 1] +=
+                -G * mas[i] * dy / (r * r * r);
+        }
 
         __syncthreads();
 
-
         // Update vel[t+1]
-            vel[(t + 1) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 0] =
-                vel[t * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 0] +
-                0.5 *
-                    (acc[t * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 0] +
-                     acc[(t + 1) * N_PARTICLE * DIMENSION + particle_id * DIMENSION +
-                         0]) *
-                    dt;
-            vel[(t + 1) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 1] =
-                vel[t * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 1] +
-                0.5 *
-                    (acc[t * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 1] +
-                     acc[(t + 1) * N_PARTICLE * DIMENSION + particle_id * DIMENSION +
-                         1]) *
-                    dt;
-
-        // // Update pos[t+1]
-        // for (int particle_id = 0; particle_id < N_PARTICLE; particle_id++) {
-        //     pos[(t + 1) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 0] =
-        //         pos[t * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 0] +
-        //         vel[t * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 0] * dt +
-        //         0.5 * acc[t * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 0] * dt *
-        //             dt;
-        //     pos[(t + 1) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 1] =
-        //         pos[t * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 1] +
-        //         vel[t * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 1] * dt +
-        //         0.5 * acc[t * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 1] * dt *
-        //             dt;
-        // }
-
-        // // Update acc[t+1]
-        // for (int particle_id = 0; particle_id < N_PARTICLE; particle_id++) {
-        //     for (int i = 0; i < N_PARTICLE; i++) {
-        //         if (i == particle_id) continue;
-        //         double dx =
-        //             pos[(t + 1) * N_PARTICLE * DIMENSION + i * DIMENSION + 0] -
-        //             pos[(t + 1) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 0];
-        //         double dy =
-        //             pos[(t + 1) * N_PARTICLE * DIMENSION + i * DIMENSION + 1] -
-        //             pos[(t + 1) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 1];
-        //         double r = sqrt(dx * dx + dy * dy);
-        //         if (r < POS_EPS) r = MAX_POS / POS_EPS;
-        //         acc[(t + 1) * N_PARTICLE * DIMENSION + i * DIMENSION + 0] +=
-        //             -G * mas[particle_id] * dx / (r * r * r);
-        //         acc[(t + 1) * N_PARTICLE * DIMENSION + i * DIMENSION + 1] +=
-        //             -G * mas[particle_id] * dy / (r * r * r);
-        //     }
-        // }
-
-        // // Update vel[t+1]
-        // for (int particle_id = 0; particle_id < N_PARTICLE; particle_id++) {
-        //     vel[(t + 1) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 0] =
-        //         vel[t * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 0] +
-        //         0.5 *
-        //             (acc[t * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 0] +
-        //              acc[(t + 1) * N_PARTICLE * DIMENSION + particle_id * DIMENSION +
-        //                  0]) *
-        //             dt;
-        //     vel[(t + 1) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 1] =
-        //         vel[t * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 1] +
-        //         0.5 *
-        //             (acc[t * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 1] +
-        //              acc[(t + 1) * N_PARTICLE * DIMENSION + particle_id * DIMENSION +
-        //                  1]) *
-        //             dt;
-        // }
+        vel[((t + 1) % 2) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 0] =
+            vel[(t % 2) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 0] +
+            0.5 *
+                (acc[(t % 2) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 0] +
+                 acc[((t + 1) % 2) * N_PARTICLE * DIMENSION + particle_id * DIMENSION +
+                     0]) *
+                dt;
+        vel[((t + 1) % 2) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 1] =
+            vel[(t % 2) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 1] +
+            0.5 *
+                (acc[(t % 2) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 1] +
+                 acc[((t + 1) % 2) * N_PARTICLE * DIMENSION + particle_id * DIMENSION +
+                     1]) *
+                dt;
     }
 }
 
@@ -112,8 +62,8 @@ void call_cuda_sim(double *pos_host, double *vel_host, double *acc_host, double 
     size_t pos_size = sizeof(double) * N_PARTICLE * TIME_LENGTH *
                            DIMENSION;
     size_t mas_size = sizeof(double) * N_PARTICLE;
-    size_t vel_size = sizeof(double) * N_PARTICLE * TIME_LENGTH * DIMENSION;
-    size_t acc_size = sizeof(double) * N_PARTICLE * TIME_LENGTH * DIMENSION;
+    size_t vel_size = sizeof(double) * N_PARTICLE * 2 * DIMENSION;
+    size_t acc_size = sizeof(double) * N_PARTICLE * 2 * DIMENSION;
 
     cudaMalloc(&pos, pos_size);
     cudaMalloc(&mas, mas_size);

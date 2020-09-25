@@ -14,7 +14,7 @@
 // const double POINT_SIZE = 5;
 // const double TAIL_POINT_SIZE = 1;
 
-const int N_PARTICLE = 100;
+const int N_PARTICLE = 200;
 const int TIME_LENGTH = 1000000;
 const int DIMENSION = 2;
 const double G = 6.67430e-11;
