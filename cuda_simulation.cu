@@ -1,5 +1,7 @@
 #include <cooperative_groups.h>
 
+#include <stdio.h>
+
 #include "constants.h"
 
 __global__ void sim_kernel(double *pos, double *vel, double *acc, double *mas){
@@ -67,26 +69,71 @@ void call_cuda_sim(double *pos_host, double *vel_host, double *acc_host, double 
     size_t vel_size = sizeof(double) * N_PARTICLE * 2 * DIMENSION;
     size_t acc_size = sizeof(double) * N_PARTICLE * 2 * DIMENSION;
 
-    cudaMalloc(&pos, pos_size);
-    cudaMalloc(&mas, mas_size);
-    cudaMalloc(&vel, vel_size);
-    cudaMalloc(&acc, acc_size);
+    cudaError_t err;
 
-    cudaMemcpy(pos, pos_host, pos_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(mas, mas_host, mas_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(vel, vel_host, vel_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(acc, acc_host, acc_size, cudaMemcpyHostToDevice);
+    err = cudaMalloc(&pos, pos_size);
+    if(err != cudaSuccess){
+        fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
+    }
+    err = cudaMalloc(&mas, mas_size);
+    if(err != cudaSuccess){
+        fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
+    }
+    err = cudaMalloc(&vel, vel_size);
+    if(err != cudaSuccess){
+        fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
+    }
+    err = cudaMalloc(&acc, acc_size);
+    if(err != cudaSuccess){
+        fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
+    }
+
+
+    err = cudaMemcpy(pos, pos_host, pos_size, cudaMemcpyHostToDevice);
+    if(err != cudaSuccess){
+        fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
+    }
+    err = cudaMemcpy(mas, mas_host, mas_size, cudaMemcpyHostToDevice);
+    if(err != cudaSuccess){
+        fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
+    }
+    err = cudaMemcpy(vel, vel_host, vel_size, cudaMemcpyHostToDevice);
+    if(err != cudaSuccess){
+        fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
+    }
+    err = cudaMemcpy(acc, acc_host, acc_size, cudaMemcpyHostToDevice);
+    if(err != cudaSuccess){
+        fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
+    }
 
 
     const void* args[]= {&pos, &vel, &acc, &mas};
     dim3 grid(N_PARTICLE / N_THREAD_PER_BLOCK, 1, 1);
 	dim3 block(N_THREAD_PER_BLOCK, 1, 1);
-	cudaLaunchCooperativeKernel((void*)&sim_kernel, grid, block, (void**)args);
+	err = cudaLaunchCooperativeKernel((void*)&sim_kernel, grid, block, (void**)args);
+    if(err != cudaSuccess){
+        fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
+    }
 
-    cudaMemcpy(pos_host, pos, pos_size, cudaMemcpyDeviceToHost);
+    err = cudaMemcpy(pos_host, pos, pos_size, cudaMemcpyDeviceToHost);
+    if(err != cudaSuccess){
+        fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
+    }
 
-    cudaFree(pos);
-    cudaFree(mas);
-    cudaFree(acc);
-    cudaFree(vel);
+    err = cudaFree(pos);
+    if(err != cudaSuccess){
+        fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
+    }
+    err = cudaFree(mas);
+    if(err != cudaSuccess){
+        fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
+    }
+    err = cudaFree(acc);
+    if(err != cudaSuccess){
+        fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
+    }
+    err = cudaFree(vel);
+    if(err != cudaSuccess){
+        fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(err), __FILE__, __LINE__);
+    }
 }
