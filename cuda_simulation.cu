@@ -1,6 +1,9 @@
+#include <cooperative_groups.h>
+
 #include "constants.h"
 
 __global__ void sim_kernel(double *pos, double *vel, double *acc, double *mas){
+    cooperative_groups::grid_group g = cooperative_groups::this_grid();
     int particle_id = threadIdx.x;
 
     for (int t = 0; t < TIME_LENGTH - 1; t++) {
@@ -16,11 +19,10 @@ __global__ void sim_kernel(double *pos, double *vel, double *acc, double *mas){
                 0.5 * acc[(t % 2) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 1] * dt *
                     dt;
 
-        __syncthreads();
+        g.sync();
 
         // Update acc[t+1]
-        acc[((t + 1) % 2) * N_PARTICLE * DIMENSION + particle_id  * DIMENSION + 0] = 0;
-        acc[((t + 1) % 2) * N_PARTICLE * DIMENSION + particle_id  * DIMENSION + 1] = 0;
+        double acc_x = 0, acc_y = 0;
         for (int i = 0; i < N_PARTICLE; i++) {
             if (i == particle_id) continue;
             double dx =
@@ -31,13 +33,13 @@ __global__ void sim_kernel(double *pos, double *vel, double *acc, double *mas){
                 pos[(t + 1) * N_PARTICLE * DIMENSION + i * DIMENSION + 1];
             double r = sqrt(dx * dx + dy * dy);
             if (r < POS_EPS) r = POS_EPS;
-            acc[((t + 1) % 2) * N_PARTICLE * DIMENSION + particle_id  * DIMENSION + 0] +=
-                -G * mas[i] * dx / (r * r * r);
-            acc[((t + 1) % 2) * N_PARTICLE * DIMENSION + particle_id  * DIMENSION + 1] +=
-                -G * mas[i] * dy / (r * r * r);
+            acc_x += -G * mas[i] * dx / (r * r * r);
+            acc_y += -G * mas[i] * dy / (r * r * r);
         }
+        acc[((t + 1) % 2) * N_PARTICLE * DIMENSION + particle_id  * DIMENSION + 0] = acc_x;
+        acc[((t + 1) % 2) * N_PARTICLE * DIMENSION + particle_id  * DIMENSION + 1] = acc_y;
 
-        __syncthreads();
+        g.sync();
 
         // Update vel[t+1]
         vel[((t + 1) % 2) * N_PARTICLE * DIMENSION + particle_id * DIMENSION + 0] =
@@ -75,7 +77,11 @@ void call_cuda_sim(double *pos_host, double *vel_host, double *acc_host, double 
     cudaMemcpy(vel, vel_host, vel_size, cudaMemcpyHostToDevice);
     cudaMemcpy(acc, acc_host, acc_size, cudaMemcpyHostToDevice);
 
-    sim_kernel<<<1, N_PARTICLE>>>(pos, vel, acc, mas);
+
+    const void* args[]= {&pos, &vel, &acc, &mas};
+    dim3 grid(1, 1, 1);
+	dim3 block(N_PARTICLE, 1, 1);
+	cudaLaunchCooperativeKernel((void*)&sim_kernel, grid, block, (void**)args);
 
     cudaMemcpy(pos_host, pos, pos_size, cudaMemcpyDeviceToHost);
 
