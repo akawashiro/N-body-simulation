@@ -4,7 +4,7 @@
 
 __global__ void sim_kernel(double *pos, double *vel, double *acc, double *mas){
     cooperative_groups::grid_group g = cooperative_groups::this_grid();
-    int particle_id = threadIdx.x;
+    int particle_id = blockIdx.x *blockDim.x + threadIdx.x;
 
     for (int t = 0; t < TIME_LENGTH - 1; t++) {
         // Update pos[t+1]
@@ -79,8 +79,8 @@ void call_cuda_sim(double *pos_host, double *vel_host, double *acc_host, double 
 
 
     const void* args[]= {&pos, &vel, &acc, &mas};
-    dim3 grid(1, 1, 1);
-	dim3 block(N_PARTICLE, 1, 1);
+    dim3 grid(N_PARTICLE / N_THREAD_PER_BLOCK, 1, 1);
+	dim3 block(N_THREAD_PER_BLOCK, 1, 1);
 	cudaLaunchCooperativeKernel((void*)&sim_kernel, grid, block, (void**)args);
 
     cudaMemcpy(pos_host, pos, pos_size, cudaMemcpyDeviceToHost);
