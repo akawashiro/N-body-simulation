@@ -16,7 +16,7 @@
 
 // This setting works
 const int N_THREAD_PER_BLOCK = 64;
-const int N_PARTICLE = N_THREAD_PER_BLOCK * 16;
+const int N_PARTICLE = N_THREAD_PER_BLOCK;
 const int CUDA_TIME_LENGTH = 4096;
 const int TIME_LENGTH = CUDA_TIME_LENGTH * 16;
 const int DIMENSION = 2;
